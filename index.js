@@ -2,6 +2,8 @@ const axios = require('axios');
 
 const BATTLE_HISTORY_URL = 'https://api2.splinterlands.com/battle/history2';
 const CARD_DETAILS_URL = 'https://api2.splinterlands.com/cards/get_details';
+const BATTLE_HISTORY_URL = 'https://api.steemmonsters.io/players/history?username=solaito'; //&types=sm_battle,battle
+// &limit=1000, shows all battles during the last 30 days.
 const BATTLE_HISTORY_PARAMS = {
     player: 'schwarszchild',
 };
@@ -12,6 +14,7 @@ const BATTLE_HISTORY_PARAMS = {
 // Summoner'larin hangi sartlarda % kac kazandigini bul.
 // TODO: leaderboards'tan top kisilere odaklanip en cok oynadiklari desteleri bul.
 // Top oyuncularin kart listesini getir.
+// TODO: karşılaşılan oyuncunun günlük görevi duruyor mu bak.
 
 // OTOMATIK OYNAMA
 
@@ -63,6 +66,7 @@ async function main() {
 
     const cardDetailsRes = await axios.get(CARD_DETAILS_URL, {});
     console.log(Object.keys(cardDetailsRes.data));
+    console.log("branch 1");
 
 }
 
