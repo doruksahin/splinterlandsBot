@@ -15,6 +15,9 @@ const BATTLE_HISTORY_PARAMS = {
 
 // OTOMATIK OYNAMA
 
+function a() {
+    console.log("jokes on you.");
+}
 
 async function main() {
     const res = await axios.get(BATTLE_HISTORY_URL, { BATTLE_HISTORY_PARAMS });
