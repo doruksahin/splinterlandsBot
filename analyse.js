@@ -23,11 +23,10 @@ async function analyse(client) {
             j[mana] = {};
         }
         for (const battle of uniqueBattleQuery.rows) {
-            const isWinner = true;
-            const battleCardsQuery = await client.query(scripts.getBattleCards, [battle.id, isWinner]);
-            const summoner = battleCardsQuery.rows.filter(cards => {
-                if (cards.is_summoner) {
-                    return cards.card_detail_id;
+            const battleCardsQuery = await client.query(scripts.getBattleCards, [battle.id]);
+            const summoner = battleCardsQuery.rows.filter(card => {
+                if (card.is_summoner && card.is_winner) {
+                    return card.card_detail_id;
                 }
             })[0];
             const summonerName = cardMap[summoner.card_detail_id];
