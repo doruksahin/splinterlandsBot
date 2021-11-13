@@ -21,6 +21,16 @@ function getActiveStatus(inactives) {
     return elementsObj;
 }
 
+
+async function isBattleExists(client, battle_queue_id) {
+    const res = await client.query(scripts.getBattle, [battle_queue_id])
+    if (res.rows && res.rows.length > 0) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 async function saveBattles(client, url, params) {
     const res = await axios.get(url, params);
 
@@ -28,19 +38,22 @@ async function saveBattles(client, url, params) {
     for (const battle of res.data.battles) {
         console.log(count++);
         const winner = battle.winner;
+        const loser = battle.player_1 === winner ? battle.player_2 : battle.player_1;
         const elo = battle.player_1_rating_final;
         const ruleset = battle.ruleset;
         const mana = battle.mana_cap;
         const { red, blue, green, black, white, gold } = getActiveStatus(battle.inactive);
-        const saveBattleRes = await client.query(scripts.saveBattle, [mana, red, blue, green, black, white, gold, ruleset, elo])
-            .catch(err => {
-                console.log(err);
-            });
-        const battleId = saveBattleRes.rows[0].id;
+        const battle_id = battle.battle_queue_id_1;
+        if (!await isBattleExists(client, battle_id)) {
+            const saveBattleRes = await client.query(scripts.saveBattle, [battle_id, mana, red, blue, green, black, white, gold, ruleset, elo, winner, loser])
+                .catch(err => {
+                    console.log(err);
+                });
+            const battleId = saveBattleRes.rows[0].id;
 
-        const details = JSON.parse(battle.details);
-        await saveBattleCards(client, battleId, details, winner);
-
+            const details = JSON.parse(battle.details);
+            await saveBattleCards(client, battleId, details, winner);
+        }
     }
 }
 
