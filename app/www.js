@@ -24,11 +24,11 @@ async function startServer() {
 
 async function startCrawlDataScheduler() {
     schedule.scheduleJob('fetch data', '*/10 * * * *', async () => {
-
+        require('./worker.js');
     });
 }
 
 
 
 startServer();
-
+startCrawlDataScheduler();
