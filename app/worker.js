@@ -1,7 +1,12 @@
+const schedule = require('node-schedule');
 const axios = require('axios');
 const scripts = require('./postgre_scripts');
+const { getTopPlayers, savePlayerBattles, saveCardDetails, getTopOfLeaguePlayers } = require('./crawl');
+const API_LEAGUE_LEADERBOARDS = 'https://api2.splinterlands.com/players/leaderboard_with_player';
+const API1_BATTLE_HISTORY_URL = 'https://api2.splinterlands.com/battle/history';
+const API_TOP100_USERS_URL = 'https://api2.splinterlands.com/players/leaderboard';
+const API_CARD_DETAILS_URL = 'https://api2.splinterlands.com/cards/get_details';
 const elements = ["red", "green", "blue", "black", "white", "gold"];
-
 
 
 // return json obj.
@@ -21,8 +26,7 @@ function getActiveStatus(inactives) {
     return elementsObj;
 }
 
-
-async function isBattleExists(client, battle_queue_id) {
+async function isBattleExists(battle_queue_id) {
     const res = await client.query(scripts.getBattle, [battle_queue_id])
         .catch(function (err) {
             console.log(err);
@@ -33,7 +37,6 @@ async function isBattleExists(client, battle_queue_id) {
         return false;
     }
 }
-
 
 async function getTopPlayers(url) {
     const res = await axios.get(url);
@@ -54,7 +57,7 @@ async function getTopOfLeaguePlayers(url, params) {
     return players;
 }
 
-async function savePlayerBattles(client, battle_url, player, leagueId) {
+async function savePlayerBattles(battle_url, player, leagueId) {
     const res = await axios.get(battle_url, { params: { player: player } });
 
     let count = 0;
@@ -69,13 +72,13 @@ async function savePlayerBattles(client, battle_url, player, leagueId) {
             const ruleset = battle.ruleset;
             const { red, blue, green, black, white, gold } = getActiveStatus(battle.inactive);
             const battle_id = battle.battle_queue_id_1;
-            if (!await isBattleExists(client, battle_id)) {
+            if (!await isBattleExists(battle_id)) {
                 const saveBattleRes = await client.query(scripts.saveBattle, [battle_id, mana, red, blue, green, black, white, gold, ruleset, elo, winner, loser, leagueId])
                     .catch(err => {
                         console.log(err);
                     });
                 const battleId = saveBattleRes.rows[0].id;
-                await saveBattleCards(client, battleId, details, winner);
+                await saveBattleCards(battleId, details, winner);
             }
         }
     }
@@ -83,7 +86,7 @@ async function savePlayerBattles(client, battle_url, player, leagueId) {
 
 //details.team1.summoner.card_detail_id // 111
 //details.team1.summoner.uid; //'C1-111-HIRTZTEH8W'
-async function saveBattleCards(client, battleId, details, winner) {
+async function saveBattleCards(battleId, details, winner) {
     if (details.type != 'Surrender') {
         let is_winner = details.team1.player === winner ? true : false;
         for (let i = 0; i < details.team1.monsters.length; i++) {
@@ -104,7 +107,7 @@ async function saveBattleCards(client, battleId, details, winner) {
 
 
 
-async function saveCardDetails(client, url) {
+async function saveCardDetails(url) {
     const res = await axios.get(url);
     for (const card of res.data) {
         await client.query(scripts.saveCard, [card.id, card.name, card.color, card.type]);
@@ -113,11 +116,31 @@ async function saveCardDetails(client, url) {
 
 
 
+async function saveBattles() {
+    const players = await getTopPlayers(API_TOP100_USERS_URL);
+    let playerCounter = 0;
+    for (const player of players) {
+        console.log("player: ", playerCounter++);
+        await savePlayerBattles(API1_BATTLE_HISTORY_URL, player, null);
+    }
 
-
-module.exports = {
-    savePlayerBattles,
-    saveCardDetails,
-    getTopPlayers,
-    getTopOfLeaguePlayers
+    for (let leagueId = 0; leagueId < 4; leagueId++) {
+        console.log("leagueId: ", leagueId);
+        const players = await getTopOfLeaguePlayers(API_LEAGUE_LEADERBOARDS, { params: { season: 74, leaderboard: leagueId, username: 'allahiyedim' } });
+        let playerCount = 0;
+        for (const player of players) {
+            console.log("playerCount: ", playerCount++);
+            await savePlayerBattles(API1_BATTLE_HISTORY_URL, player, leagueId);
+        }
+    }
 }
+
+
+
+
+module.exports = async (callback) => {
+    schedule.scheduleJob('pqWorker', '*/10 * * * *', async () => {
+        saveBattles();
+    });
+    callback();
+};

@@ -1,6 +1,8 @@
 const router = require("express").Router();
 const service = require("./service");
 const { Response } = require('./helpers/responses');
+const { routeFunctionErrorHandler } = require('./helpers/handleErrors');
+
 
 
 router.get("/:generalAnalyseSummoner", async (req, res) => {
