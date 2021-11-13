@@ -55,12 +55,12 @@ async function getTopOfLeaguePlayers(url, params) {
     return players;
 }
 
-async function savePlayerBattles(client, battle_url, player) {
+async function savePlayerBattles(client, battle_url, player, leagueId) {
     const res = await axios.get(battle_url, { params: { player: player } });
 
     let count = 0;
     for (const battle of res.data.battles) {
-        console.log(count++);
+        const details = JSON.parse(battle.details);
         const mana = battle.mana_cap;
         const surrender = details.type == 'Surrender' ? true : false;
         if (mana && !surrender) {
@@ -71,13 +71,11 @@ async function savePlayerBattles(client, battle_url, player) {
             const { red, blue, green, black, white, gold } = getActiveStatus(battle.inactive);
             const battle_id = battle.battle_queue_id_1;
             if (!await isBattleExists(client, battle_id)) {
-                const saveBattleRes = await client.query(scripts.saveBattle, [battle_id, mana, red, blue, green, black, white, gold, ruleset, elo, winner, loser])
+                const saveBattleRes = await client.query(scripts.saveBattle, [battle_id, mana, red, blue, green, black, white, gold, ruleset, elo, winner, loser, leagueId])
                     .catch(err => {
                         console.log(err);
                     });
                 const battleId = saveBattleRes.rows[0].id;
-
-                const details = JSON.parse(battle.details);
                 await saveBattleCards(client, battleId, details, winner);
             }
         }
