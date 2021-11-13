@@ -1,5 +1,4 @@
 const axios = require('axios');
-const { writeToJson } = require('./helpers');
 const scripts = require('./postgre_scripts');
 const elements = ["red", "green", "blue", "black", "white", "gold"];
 

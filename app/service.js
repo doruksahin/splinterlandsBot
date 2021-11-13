@@ -1,5 +1,3 @@
-
-
 const API3_BATTLE_HISTORY_URL = 'https://api.steemmonsters.io/players/history';
 const API3_BATTLE_HISTORY_PARAMS = {
     params: { username: 'schwarszchild', types: 'sm_battle,battle' }
@@ -11,7 +9,7 @@ const API_LEAGUE_LEADERBOARDS = 'https://api2.splinterlands.com/players/leaderbo
 const { getTopPlayers, savePlayerBattles, saveCardDetails, getTopOfLeaguePlayers } = require('./crawl');
 const { Client } = require('pg');
 const { analyse } = require('./analyse');
-const { writeToJson } = require('./helpers');
+const { writeToJson } = require('./helpers/helpers');
 const client = new Client({
     user: 'postgres',
     host: 'localhost',
@@ -39,7 +37,7 @@ const client = new Client({
 async function wrapperMain() {
     await client.connect();
     //await fetchData();
-    await analyseData();
+    await getGeneralAnalyseSummoner();
 }
 
 async function fetchData() {
@@ -61,7 +59,7 @@ async function fetchData() {
     }
 }
 
-async function analyseData() {
+async function getGeneralAnalyseSummoner() {
     const j = await analyse(client);
     console.log(j);
     writeToJson(j, "analyse.json");
