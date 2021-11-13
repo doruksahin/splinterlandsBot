@@ -1,3 +1,5 @@
+
+
 const API3_BATTLE_HISTORY_URL = 'https://api.steemmonsters.io/players/history';
 const API3_BATTLE_HISTORY_PARAMS = {
     params: { username: 'schwarszchild', types: 'sm_battle,battle' }
