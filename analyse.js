@@ -33,7 +33,7 @@ async function analyse(client) {
             j[mana][summonerName] ? j[mana][summonerName]++ : j[mana][summonerName] = 1;
         }
     }
-    console.log(j);
+    return j;
 }
 
 module.exports = {

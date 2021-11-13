@@ -6,9 +6,10 @@ const API1_BATTLE_HISTORY_URL = 'https://api2.splinterlands.com/battle/history';
 const API_TOP100_USERS_URL = 'https://api2.splinterlands.com/players/leaderboard';
 const API_CARD_DETAILS_URL = 'https://api2.splinterlands.com/cards/get_details';
 const API_LEAGUE_LEADERBOARDS = 'https://api2.splinterlands.com/players/leaderboard_with_player';
-const { getTopPlayers, savePlayerBattles, saveCardDetails, getTopOfLeaguePlayers } = require('./crawl.js');
+const { getTopPlayers, savePlayerBattles, saveCardDetails, getTopOfLeaguePlayers } = require('./crawl');
 const { Client } = require('pg');
-const { analyse } = require('./analyse.js');
+const { analyse } = require('./analyse');
+const { writeToJson } = require('./helpers');
 const client = new Client({
     user: 'postgres',
     host: 'localhost',
@@ -35,22 +36,33 @@ const client = new Client({
 
 async function wrapperMain() {
     await client.connect();
+    //await fetchData();
+    await analyseData();
+}
 
-    // await saveCardDetails(client, API_CARD_DETAILS_URL);
-    // await savePlayerBattles(client, API1_BATTLE_HISTORY_URL, "allahiyedim");
+async function fetchData() {
+    const players = await getTopPlayers(API_TOP100_USERS_URL);
+    let playerCounter = 0;
+    for (const player of players) {
+        console.log("player: ", playerCounter++);
+        await savePlayerBattles(client, API1_BATTLE_HISTORY_URL, player, null);
+    }
 
-    // const players = await getTopPlayers(API_TOP100_USERS_URL);
-    // for (const player of players) {
-    //     await savePlayerBattles(client, API1_BATTLE_HISTORY_URL, player);
-    // }
+    for (let leagueId = 0; leagueId < 4; leagueId++) {
+        console.log("leagueId: ", leagueId);
+        const players = await getTopOfLeaguePlayers(API_LEAGUE_LEADERBOARDS, { params: { season: 74, leaderboard: leagueId, username: 'allahiyedim' } });
+        let playerCount = 0;
+        for (const player of players) {
+            console.log("playerCount: ", playerCount++);
+            await savePlayerBattles(client, API1_BATTLE_HISTORY_URL, player, leagueId);
+        }
+    }
+}
 
-
-    // const players = await getTopOfLeaguePlayers(API_LEAGUE_LEADERBOARDS, { params: { season: 74, leaderboard: 0, username: 'allahiyedim' } });
-    // for (const player of players) {
-    //     await savePlayerBattles(client, API1_BATTLE_HISTORY_URL, player);
-    // }
-    analyse(client);
-
+async function analyseData() {
+    const j = await analyse(client);
+    console.log(j);
+    writeToJson(j, "analyse.json");
 }
 
 wrapperMain();
