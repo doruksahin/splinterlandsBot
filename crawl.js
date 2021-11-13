@@ -39,7 +39,7 @@ async function saveBattles(client, url, params) {
         const battleId = saveBattleRes.rows[0].id;
 
         const details = JSON.parse(battle.details);
-        await saveBattleCards(battleId, details, winner);
+        await saveBattleCards(client, battleId, details, winner);
 
     }
 }
