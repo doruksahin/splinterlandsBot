@@ -7,15 +7,16 @@ const elements = ["red", "green", "blue", "black", "white", "gold"];
 
 // return json obj.
 function getActiveStatus(inactives) {
-    const inactivesArr = inactives.toLowerCase().split(',');
     const elementsObj = {};
     for (const element of elements) {
-        elementsObj[element] = false;
-
+        elementsObj[element] = true;
     }
-    for (const element of elements) {
-        if (inactivesArr.includes(element)) {
-            elementsObj[element] = true;
+    if (inactives) {
+        const inactivesArr = inactives.toLowerCase().split(',');
+        for (const element of elements) {
+            if (inactivesArr.includes(element)) {
+                elementsObj[element] = false;
+            }
         }
     }
     return elementsObj;
@@ -24,6 +25,9 @@ function getActiveStatus(inactives) {
 
 async function isBattleExists(client, battle_queue_id) {
     const res = await client.query(scripts.getBattle, [battle_queue_id])
+        .catch(function (err) {
+            console.log(err);
+        });
     if (res.rows && res.rows.length > 0) {
         return true;
     } else {
@@ -31,8 +35,18 @@ async function isBattleExists(client, battle_queue_id) {
     }
 }
 
-async function saveBattles(client, url, params) {
-    const res = await axios.get(url, params);
+
+async function getTopPlayers(top_players_url) {
+    const res = await axios.get(top_players_url);
+    const players = [];
+    for (const playerObj of res.data) {
+        players.push(playerObj.player);
+    }
+    return players;
+}
+
+async function savePlayerBattles(client, battle_url, player) {
+    const res = await axios.get(battle_url, { params: { player: player } });
 
     let count = 0;
     for (const battle of res.data.battles) {
@@ -44,7 +58,7 @@ async function saveBattles(client, url, params) {
         const mana = battle.mana_cap;
         const { red, blue, green, black, white, gold } = getActiveStatus(battle.inactive);
         const battle_id = battle.battle_queue_id_1;
-        if (!await isBattleExists(client, battle_id)) {
+        if (mana && !await isBattleExists(client, battle_id)) {
             const saveBattleRes = await client.query(scripts.saveBattle, [battle_id, mana, red, blue, green, black, white, gold, ruleset, elo, winner, loser])
                 .catch(err => {
                     console.log(err);
@@ -60,26 +74,23 @@ async function saveBattles(client, url, params) {
 //details.team1.summoner.card_detail_id // 111
 //details.team1.summoner.uid; //'C1-111-HIRTZTEH8W'
 async function saveBattleCards(client, battleId, details, winner) {
-    let is_winner = details.team1.player === winner ? true : false;
-    for (let i = 0; i < details.team1.monsters.length; i++) {
-        const monster = details.team1.monsters[i];
-        await client.query(scripts.saveBattleCards, [battleId, false, i, monster.card_detail_id, is_winner]);
-    }
-    await client.query(scripts.saveBattleCards, [battleId, true, null, details.team1.summoner.card_detail_id, is_winner]);
+    if (details.type != 'Surrender') {
+        let is_winner = details.team1.player === winner ? true : false;
+        for (let i = 0; i < details.team1.monsters.length; i++) {
+            const monster = details.team1.monsters[i];
+            await client.query(scripts.saveBattleCards, [battleId, false, i, monster.card_detail_id, is_winner]);
+        }
+        await client.query(scripts.saveBattleCards, [battleId, true, null, details.team1.summoner.card_detail_id, is_winner]);
 
-    is_winner = !is_winner;
-    for (let i = 0; i < details.team2.monsters.length; i++) {
-        const monster = details.team2.monsters[i];
-        await client.query(scripts.saveBattleCards, [battleId, false, i, monster.card_detail_id, is_winner]);
+        is_winner = !is_winner;
+        for (let i = 0; i < details.team2.monsters.length; i++) {
+            const monster = details.team2.monsters[i];
+            await client.query(scripts.saveBattleCards, [battleId, false, i, monster.card_detail_id, is_winner]);
+        }
+        await client.query(scripts.saveBattleCards, [battleId, true, null, details.team1.summoner.card_detail_id, is_winner]);
     }
-    await client.query(scripts.saveBattleCards, [battleId, true, null, details.team1.summoner.card_detail_id, is_winner]);
 
 }
-
-
-
-
-
 
 
 
@@ -92,6 +103,7 @@ async function saveCardDetails(url) {
 
 
 module.exports = {
-    saveBattles,
-    saveCardDetails
+    savePlayerBattles,
+    saveCardDetails,
+    getTopPlayers
 }
