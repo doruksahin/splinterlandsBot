@@ -99,7 +99,7 @@ async function saveBattleCards(battleId, details, winner) {
             const monster = details.team2.monsters[i];
             await client.query(scripts.saveBattleCards, [battleId, false, i, monster.card_detail_id, is_winner]);
         }
-        await client.query(scripts.saveBattleCards, [battleId, true, null, details.team1.summoner.card_detail_id, is_winner]);
+        await client.query(scripts.saveBattleCards, [battleId, true, null, details.team2.summoner.card_detail_id, is_winner]);
     }
 
 }
