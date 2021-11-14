@@ -1,7 +1,7 @@
 const express = require('express');
 const router = require("./route");
 const schedule = require('node-schedule');
-
+const houseKeeping = require('./houseKeeping');
 
 const { Client } = require('pg');
 global.client = new Client({
@@ -15,6 +15,7 @@ global.client = new Client({
 async function startServer() {
     await client.connect();
     const server = express();
+    server.use(express.json());
     server.use("/analyse", router);
     server.listen(5000, () => {
         console.log("https://localhost:5000 is listening.")
@@ -22,13 +23,17 @@ async function startServer() {
 
 };
 
-async function startCrawlDataScheduler() {
-    schedule.scheduleJob('fetch data', '*/10 * * * *', async () => {
-        require('./worker.js');
-    });
-}
+
+// yanda klass bi amca var
+// hangi anlamda
+// janti
+// fötr şapka
+// peki uyumadan önce "yarın böyle giyincem" demiş midir
+// ütü
+// sağımdaki mi
 
 
 
 startServer();
-startCrawlDataScheduler();
+houseKeeping.initSchedule();
+

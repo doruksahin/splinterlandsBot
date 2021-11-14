@@ -37,6 +37,34 @@ async function getGeneralAnalyseSummoner() {
     return j;
 }
 
+async function getDetailedAnalyse(mana, rule, red, green, blue, black, white, gold) {
+    const winners = [];
+    const cardMap = await getCardIdNameMap();
+    try {
+        const uniqueBattleQuery = await client.query(scripts.getUniqueBattle, [mana, rule, red, green, blue, black, white, gold]);
+        for (const battle of uniqueBattleQuery.rows) {
+            const winner = {};
+            winner['minions'] = [];
+            const battleCardsQuery = await client.query(scripts.getBattleCards, [battle.id]);
+            battleCardsQuery.rows.map(card => {
+                const cardName = cardMap[card.card_detail_id];
+                if (card.is_winner) {
+                    if (card.is_summoner) {
+                        winner['summoner'] = cardName;
+                    } else {
+                        winner['minions'].push(cardName);
+                    }
+                }
+            });
+            winners.push(winner);
+        }
+    } catch (e) {
+        return e;
+    }
+    return winners;
+}
+
 module.exports = {
     getGeneralAnalyseSummoner,
+    getDetailedAnalyse,
 }

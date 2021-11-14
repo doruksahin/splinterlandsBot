@@ -1,7 +1,6 @@
 const schedule = require('node-schedule');
 const axios = require('axios');
 const scripts = require('./postgre_scripts');
-const { getTopPlayers, savePlayerBattles, saveCardDetails, getTopOfLeaguePlayers } = require('./crawl');
 const API_LEAGUE_LEADERBOARDS = 'https://api2.splinterlands.com/players/leaderboard_with_player';
 const API1_BATTLE_HISTORY_URL = 'https://api2.splinterlands.com/battle/history';
 const API_TOP100_USERS_URL = 'https://api2.splinterlands.com/players/leaderboard';
@@ -136,11 +135,16 @@ async function saveBattles() {
 }
 
 
-
-
-module.exports = async (callback) => {
-    schedule.scheduleJob('pqWorker', '*/10 * * * *', async () => {
+function initSchedule() {
+    console.log("this works");
+    var event = schedule.scheduleJob("*/30 * * * *", function () {
+        console.log('This runs every 30 minutes');
         saveBattles();
     });
-    callback();
+}
+
+
+module.exports = {
+    initSchedule,
+    saveBattles,
 };
