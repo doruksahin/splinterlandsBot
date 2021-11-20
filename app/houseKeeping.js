@@ -59,25 +59,29 @@ async function getTopOfLeaguePlayers(url, params) {
 async function savePlayerBattles(battle_url, player, leagueId) {
     const res = await axios.get(battle_url, { params: { player: player } });
 
-    let count = 0;
-    for (const battle of res.data.battles) {
-        const details = JSON.parse(battle.details);
-        const mana = battle.mana_cap;
-        const surrender = details.type == 'Surrender' ? true : false;
-        if (mana && !surrender) {
-            const winner = battle.winner;
-            const loser = battle.player_1 === winner ? battle.player_2 : battle.player_1;
-            const elo = battle.player_1_rating_final;
-            const ruleset = battle.ruleset;
-            const { red, blue, green, black, white, gold } = getActiveStatus(battle.inactive);
-            const battle_id = battle.battle_queue_id_1;
-            if (!await isBattleExists(battle_id)) {
-                const saveBattleRes = await client.query(scripts.saveBattle, [battle_id, mana, red, blue, green, black, white, gold, ruleset, elo, winner, loser, leagueId])
-                    .catch(err => {
-                        console.log(err);
-                    });
-                const battleId = saveBattleRes.rows[0].id;
-                await saveBattleCards(battleId, details, winner);
+    if (res.data && res.data.battles) {
+        for (const battle of res.data.battles) {
+            const details = JSON.parse(battle.details);
+            const mana = battle.mana_cap;
+            const surrender = details.type == 'Surrender' ? true : false;
+            if (mana && !surrender) {
+                const winner = battle.winner;
+                const loser = battle.player_1 === winner ? battle.player_2 : battle.player_1;
+                const elo = battle.player_1_rating_final;
+                const ruleset = battle.ruleset;
+                const { red, blue, green, black, white, gold } = getActiveStatus(battle.inactive);
+                const battle_id = battle.battle_queue_id_1;
+                if (!await isBattleExists(battle_id)) {
+                    const checkBattleQuery = await client.query(scripts.checkBattle, [battle_id])
+                    if (checkBattleQuery.rows == 0) {
+                        const saveBattleQuery = await client.query(scripts.saveBattle, [battle_id, mana, red, blue, green, black, white, gold, ruleset, elo, winner, loser, leagueId])
+                            .catch(err => {
+                                console.log(err);
+                            });
+                        const battleId = saveBattleQuery.rows[0].id;
+                        await saveBattleCards(battleId, details, winner);
+                    }
+                }
             }
         }
     }
@@ -118,9 +122,14 @@ async function saveCardDetails(url) {
 async function saveBattles() {
     const players = await getTopPlayers(API_TOP100_USERS_URL);
     let playerCounter = 0;
+    let promiseArray = [];
     for (const player of players) {
         console.log("player: ", playerCounter++);
-        await savePlayerBattles(API1_BATTLE_HISTORY_URL, player, null);
+        promiseArray.push(savePlayerBattles(API1_BATTLE_HISTORY_URL, player, null));
+        if (promiseArray.length == 2) {
+            await Promise.all(promiseArray);
+            promiseArray = [];
+        }
     }
 
     for (let leagueId = 0; leagueId < 4; leagueId++) {
@@ -129,7 +138,11 @@ async function saveBattles() {
         let playerCount = 0;
         for (const player of players) {
             console.log("playerCount: ", playerCount++);
-            await savePlayerBattles(API1_BATTLE_HISTORY_URL, player, leagueId);
+            promiseArray.push(savePlayerBattles(API1_BATTLE_HISTORY_URL, player, leagueId));
+            if (promiseArray.length == 2) {
+                await Promise.all(promiseArray);
+                promiseArray = [];
+            }
         }
     }
 }
@@ -137,8 +150,8 @@ async function saveBattles() {
 
 function initSchedule() {
     console.log("this works");
-    var event = schedule.scheduleJob("*/30 * * * *", function () {
-        console.log('This runs every 30 minutes');
+    var event = schedule.scheduleJob("0 */1 * * *", function () {
+        console.log('This runs every 1 hour.');
         saveBattles();
     });
 }
