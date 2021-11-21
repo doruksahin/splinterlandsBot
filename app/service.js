@@ -52,7 +52,7 @@ function generateDetailedAnalyseScript(mana, rule, red, green, blue, black, whit
     ]
     if (mana || rule || red || green || blue || black || white || gold) script += ` where `;
     for (const param of params) {
-        if (param.value) {
+        if (param.value !== undefined) {
             script += ` ${param.name} ${param.operator} ${param.value} and`;
         }
     }
