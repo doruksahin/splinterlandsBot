@@ -24,13 +24,6 @@ async function startServer() {
 };
 
 
-// yanda klass bi amca var
-// hangi anlamda
-// janti
-// fötr şapka
-// peki uyumadan önce "yarın böyle giyincem" demiş midir
-// ütü
-// sağımdaki mi
 
 
 

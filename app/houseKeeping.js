@@ -6,7 +6,8 @@ const API1_BATTLE_HISTORY_URL = 'https://api2.splinterlands.com/battle/history';
 const API_TOP100_USERS_URL = 'https://api2.splinterlands.com/players/leaderboard';
 const API_CARD_DETAILS_URL = 'https://api2.splinterlands.com/cards/get_details';
 const elements = ["red", "green", "blue", "black", "white", "gold"];
-
+const { postgresErrorHandler } = require("./helpers/handleErrors");
+const { clientQuery } = require('./helpers/helpers');
 
 // return json obj.
 function getActiveStatus(inactives) {
@@ -26,7 +27,7 @@ function getActiveStatus(inactives) {
 }
 
 async function isBattleExists(battle_queue_id) {
-    const res = await client.query(scripts.getBattle, [battle_queue_id])
+    const res = await clientQuery(scripts.getBattle, [battle_queue_id])
         .catch(function (err) {
             console.log(err);
         });
@@ -72,9 +73,9 @@ async function savePlayerBattles(battle_url, player, leagueId) {
                 const { red, blue, green, black, white, gold } = getActiveStatus(battle.inactive);
                 const battle_id = battle.battle_queue_id_1;
                 if (!await isBattleExists(battle_id)) {
-                    const checkBattleQuery = await client.query(scripts.checkBattle, [battle_id])
+                    const checkBattleQuery = await clientQuery(scripts.checkBattle, [battle_id])
                     if (checkBattleQuery.rows == 0) {
-                        const saveBattleQuery = await client.query(scripts.saveBattle, [battle_id, mana, red, blue, green, black, white, gold, ruleset, elo, winner, loser, leagueId])
+                        const saveBattleQuery = await clientQuery(scripts.saveBattle, [battle_id, mana, red, blue, green, black, white, gold, ruleset, elo, winner, loser, leagueId])
                             .catch(err => {
                                 console.log(err);
                             });
@@ -86,7 +87,6 @@ async function savePlayerBattles(battle_url, player, leagueId) {
         }
     }
 }
-
 //details.team1.summoner.card_detail_id // 111
 //details.team1.summoner.uid; //'C1-111-HIRTZTEH8W'
 async function saveBattleCards(battleId, details, winner) {
@@ -94,16 +94,16 @@ async function saveBattleCards(battleId, details, winner) {
         let is_winner = details.team1.player === winner ? true : false;
         for (let i = 0; i < details.team1.monsters.length; i++) {
             const monster = details.team1.monsters[i];
-            await client.query(scripts.saveBattleCards, [battleId, false, i, monster.card_detail_id, is_winner]);
+            await clientQuery(scripts.saveBattleCards, [battleId, false, i, monster.card_detail_id, is_winner]);
         }
-        await client.query(scripts.saveBattleCards, [battleId, true, null, details.team1.summoner.card_detail_id, is_winner]);
+        await clientQuery(scripts.saveBattleCards, [battleId, true, null, details.team1.summoner.card_detail_id, is_winner]);
 
         is_winner = !is_winner;
         for (let i = 0; i < details.team2.monsters.length; i++) {
             const monster = details.team2.monsters[i];
-            await client.query(scripts.saveBattleCards, [battleId, false, i, monster.card_detail_id, is_winner]);
+            await clientQuery(scripts.saveBattleCards, [battleId, false, i, monster.card_detail_id, is_winner]);
         }
-        await client.query(scripts.saveBattleCards, [battleId, true, null, details.team2.summoner.card_detail_id, is_winner]);
+        await clientQuery(scripts.saveBattleCards, [battleId, true, null, details.team2.summoner.card_detail_id, is_winner]);
     }
 
 }
@@ -113,13 +113,14 @@ async function saveBattleCards(battleId, details, winner) {
 async function saveCardDetails(url) {
     const res = await axios.get(url);
     for (const card of res.data) {
-        await client.query(scripts.saveCard, [card.id, card.name, card.color, card.type]);
+        await clientQuery(scripts.saveCard, [card.id, card.name, card.color, card.type]);
     }
 }
 
 
 
 async function saveBattles() {
+    console.log("saveBattles() started.");
     const players = await getTopPlayers(API_TOP100_USERS_URL);
     let playerCounter = 0;
     let promiseArray = [];
@@ -149,9 +150,8 @@ async function saveBattles() {
 
 
 function initSchedule() {
-    console.log("this works");
-    var event = schedule.scheduleJob("0 */1 * * *", function () {
-        console.log('This runs every 1 hour.');
+    saveBattles();
+    schedule.scheduleJob("0 */1 * * *", function () {
         saveBattles();
     });
 }

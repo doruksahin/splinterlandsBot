@@ -1,5 +1,5 @@
 const fs = require('fs');
-
+const { postgresErrorHandler } = require('./handleErrors')
 
 function writeToJson(data, fname) {
     const stringData = JSON.stringify(data, null, 4);
@@ -13,6 +13,14 @@ function writeToJson(data, fname) {
     });
 }
 
+async function clientQuery(scriptName, params) {
+    return await client.query(scriptName, params)
+        .catch(e => {
+            postgresErrorHandler(e);
+        })
+}
+
 module.exports = {
-    writeToJson
+    writeToJson,
+    clientQuery
 };

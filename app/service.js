@@ -1,10 +1,11 @@
 
 const scripts = require('./postgre_scripts');
+const { clientQuery } = require('./helpers/helpers');
 
 
 async function getCardIdNameMap() {
     const cardMap = {};
-    const cardsQuery = await client.query(scripts.getCards, []);
+    const cardsQuery = await clientQuery(scripts.getCards, []);
     for (const card of cardsQuery.rows) {
         cardMap[card.id] = card.name;
     }
@@ -19,12 +20,12 @@ async function getGeneralAnalyseSummoner() {
 
     for (let mana = 0; mana < 30; mana++) {
         console.log(mana);
-        const uniqueBattleQuery = await client.query(scripts.getUniqueBattle, [mana, rule, true, true, true, true, true, true]);
+        const uniqueBattleQuery = await clientQuery(scripts.getUniqueBattle, [mana, rule, true, true, true, true, true, true]);
         if (uniqueBattleQuery.rows.length > 0) {
             j[mana] = {};
         }
         for (const battle of uniqueBattleQuery.rows) {
-            const battleCardsQuery = await client.query(scripts.getBattleCards, [battle.id]);
+            const battleCardsQuery = await clientQuery(scripts.getBattleCards, [battle.id]);
             const summoner = battleCardsQuery.rows.filter(card => {
                 if (card.is_summoner && card.is_winner) {
                     return card.card_detail_id;
@@ -88,26 +89,17 @@ async function getDetailedAnalyse(mana, rule, red, green, blue, black, white, go
     const cardMap = await getCardIdNameMap();
     try {
         const script = generateDetailedAnalyseScript(mana, rule, red, green, blue, black, black, white, gold);
-        const uniqueBattleQuery = await client.query(script, []);
+        const uniqueBattleQuery = await clientQuery(script, []);
+        let promiseArray = [];
         for (const battle of uniqueBattleQuery.rows) {
-            const winner = {};
-            winner['minions'] = [];
-            const battleCardsQuery = await client.query(scripts.getBattleCards, [battle.id]);
-            battleCardsQuery.rows.map(card => {
-                const cardName = cardMap[card.card_detail_id];
-                if (card.is_winner) {
-                    if (card.is_summoner) {
-                        winner['summoner'] = cardName;
-                        result['winnerSummoners'][cardName] ? result['winnerSummoners'][cardName] += 1 : result['winnerSummoners'][cardName] = 1;
-                    } else {
-                        winner['minions'].push(cardName);
-                        const key = `${cardName}-${card.position}`;
-                        result['winnerMinions'][key] ? result['winnerMinions'][key] += 1 : result['winnerMinions'][key] = 1;
-
-                    }
-                }
-            });
-            result['winnerDecks'].push(winner);
+            promiseArray.push(helper(result, battle, cardMap));
+            if (promiseArray.length == 100) {
+                await Promise.all(promiseArray);
+                promiseArray = [];
+            }
+        }
+        if (promiseArray.length > 0) {
+            await Promise.all(promiseArray);
         }
         result['winnerSummoners'] = getSortedMap(result['winnerSummoners']);
         result['winnerMinions'] = getSortedMap(result['winnerMinions'], 5);
@@ -116,6 +108,28 @@ async function getDetailedAnalyse(mana, rule, red, green, blue, black, white, go
     }
 
     return result;
+}
+
+
+async function helper(result, battle, cardMap) {
+    const winner = {};
+    winner['minions'] = [];
+    const battleCardsQuery = await clientQuery(scripts.getBattleCards, [battle.id]);
+    battleCardsQuery.rows.map(card => {
+        const cardName = cardMap[card.card_detail_id];
+        if (card.is_winner) {
+            if (card.is_summoner) {
+                winner['summoner'] = cardName;
+                result['winnerSummoners'][cardName] ? result['winnerSummoners'][cardName] += 1 : result['winnerSummoners'][cardName] = 1;
+            } else {
+                winner['minions'].push(cardName);
+                const key = `${cardName}-${card.position}`;
+                result['winnerMinions'][key] ? result['winnerMinions'][key] += 1 : result['winnerMinions'][key] = 1;
+
+            }
+        }
+    });
+    result['winnerDecks'].push(winner);
 }
 
 module.exports = {

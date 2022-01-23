@@ -9,6 +9,12 @@ function routeFunctionErrorHandler(res, error, req) {
 
 }
 
+function postgresErrorHandler(error) {
+    console.log("POSTGRES ERROR: ", error.detail, " - ", error.message);
+    process.exit(1);
+}
+
 module.exports = {
-    routeFunctionErrorHandler
+    routeFunctionErrorHandler,
+    postgresErrorHandler
 }
