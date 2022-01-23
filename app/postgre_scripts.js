@@ -6,7 +6,9 @@ module.exports = {
     values($1, $2, $3, $4, $5);`,
     getBattle: `select * from battles where battle_queue_id=$1;`,
     getBattleCards: `select * from battle_cards where battle_id=$1;`,
-    saveCard: `insert into cards(id, name, color, type) values ($1, $2, $3, $4);`,
+    saveCard: `insert into cards(id, name, color, type) 
+    values ($1, $2, $3, $4)
+    ON CONFLICT DO NOTHING;`,
     getUniqueBattle: `select * from battles where mana=$1 and rule=$2 and red=$3 and blue=$4 and green=$5 and white=$6 and black=$7 and gold=$8;`,
     getCards: `select * from cards;`,
 
