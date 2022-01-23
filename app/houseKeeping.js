@@ -110,8 +110,8 @@ async function saveBattleCards(battleId, details, winner) {
 
 
 
-async function saveCardDetails(url) {
-    const res = await axios.get(url);
+async function saveCardDetails() {
+    const res = await axios.get(API_CARD_DETAILS_URL);
     for (const card of res.data) {
         await clientQuery(scripts.saveCard, [card.id, card.name, card.color, card.type]);
     }
@@ -150,6 +150,7 @@ async function saveBattles() {
 
 
 function initSchedule() {
+    saveCardDetails();
     saveBattles();
     schedule.scheduleJob("0 */1 * * *", function () {
         saveBattles();

@@ -20,6 +20,7 @@ async function startServer() {
     server.listen(5000, () => {
         console.log("https://localhost:5000 is listening.")
     });
+    houseKeeping.initSchedule();
 
 };
 
@@ -28,5 +29,5 @@ async function startServer() {
 
 
 startServer();
-houseKeeping.initSchedule();
+
 
