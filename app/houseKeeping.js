@@ -122,15 +122,15 @@ async function populateCardData() {
 
 
 async function saveBattles() {
-    console.log("saveBattles() started. It will fetch TOP 100 player's data.");
+    console.log("saveBattles() started.")
+    console.log("Fetching TOP 100 player's data.");
     const playerBar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
 
     const players = await getTopPlayers(API_TOP100_USERS_URL);
-    let playerCounter = 0;
     let promiseArray = [];
     playerBar.start(players.length, 0);
     for (const player of players) {
-        playerBar.update(playerCounter++);
+        playerBar.increment();
         promiseArray.push(savePlayerBattles(API1_BATTLE_HISTORY_URL, player, null));
         if (promiseArray.length == 2) {
             await Promise.all(promiseArray);
@@ -138,12 +138,13 @@ async function saveBattles() {
         }
     }
 
+    console.log("Fetching all leagues TOP 100 player's data.");
     for (let leagueId = 0; leagueId < 4; leagueId++) {
         console.log("leagueId: ", leagueId);
         const players = await getTopOfLeaguePlayers(API_LEAGUE_LEADERBOARDS, { params: { season: 74, leaderboard: leagueId, username: 'allahiyedim' } });
-        let playerCount = 0;
+        playerBar.start(players.length, 0);
         for (const player of players) {
-            console.log("playerCount: ", playerCount++);
+            playerBar.increment();
             promiseArray.push(savePlayerBattles(API1_BATTLE_HISTORY_URL, player, leagueId));
             if (promiseArray.length == 2) {
                 await Promise.all(promiseArray);
@@ -151,6 +152,8 @@ async function saveBattles() {
             }
         }
     }
+    console.log("End of saveBattles()");
+
 }
 
 
