@@ -160,7 +160,7 @@ async function saveBattles() {
 function initSchedule() {
     populateCardData();
     saveBattles();
-    schedule.scheduleJob("0 */1 * * *", function () {
+    schedule.scheduleJob("0 */6 * * *", function () {
         saveBattles();
     });
 }
