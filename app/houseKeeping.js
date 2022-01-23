@@ -8,6 +8,8 @@ const API_CARD_DETAILS_URL = 'https://api2.splinterlands.com/cards/get_details';
 const elements = ["red", "green", "blue", "black", "white", "gold"];
 const { postgresErrorHandler } = require("./helpers/handleErrors");
 const { clientQuery } = require('./helpers/helpers');
+const cliProgress = require('cli-progress');
+
 
 // return json obj.
 function getActiveStatus(inactives) {
@@ -110,7 +112,7 @@ async function saveBattleCards(battleId, details, winner) {
 
 
 
-async function saveCardDetails() {
+async function populateCardData() {
     const res = await axios.get(API_CARD_DETAILS_URL);
     for (const card of res.data) {
         await clientQuery(scripts.saveCard, [card.id, card.name, card.color, card.type]);
@@ -120,12 +122,15 @@ async function saveCardDetails() {
 
 
 async function saveBattles() {
-    console.log("saveBattles() started.");
+    console.log("saveBattles() started. It will fetch TOP 100 player's data.");
+    const playerBar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
+
     const players = await getTopPlayers(API_TOP100_USERS_URL);
     let playerCounter = 0;
     let promiseArray = [];
+    playerBar.start(players.length, 0);
     for (const player of players) {
-        console.log("player: ", playerCounter++);
+        playerBar.update(playerCounter++);
         promiseArray.push(savePlayerBattles(API1_BATTLE_HISTORY_URL, player, null));
         if (promiseArray.length == 2) {
             await Promise.all(promiseArray);
@@ -150,7 +155,7 @@ async function saveBattles() {
 
 
 function initSchedule() {
-    saveCardDetails();
+    populateCardData();
     saveBattles();
     schedule.scheduleJob("0 */1 * * *", function () {
         saveBattles();
